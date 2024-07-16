@@ -1,0 +1,9 @@
+April 2023 - TIN wsdl
+
+Demo (DEMO works after TIN):
+
+svcutil https://eksternwiki.skat.dk/services/demotin/eIndkomst10/IndkomstOplysningPersonHent.wsdl /out:EIndkomstProxyDemo.cs /namespace:*,dk.skat.eindkomst /syncOnly /noConfig
+
+Prod:
+
+svcutil https://eksternwiki.skat.dk/services/prodtin/eIndkomst10/IndkomstOplysningPersonHent.wsdl /out:EIndkomstProxy.cs /namespace:*,dk.skat.eindkomst /syncOnly /noConfig
