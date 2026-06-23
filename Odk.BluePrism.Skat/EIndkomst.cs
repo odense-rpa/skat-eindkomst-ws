@@ -142,6 +142,7 @@ namespace Odk.BluePrism.Skat
             // - used to decrypt the response from Eindkomst service
             // TODO: refactor
             var servicecert = client.ClientCredentials.ServiceCertificate;
+            //servicecert.Authentication.CertificateValidationMode = System.ServiceModel.Security.X509CertificateValidationMode.PeerOrChainTrust; // TODO: set to ChainTrust and ensure cert is in Trusted Root store 
             servicecert.SetDefaultCertificate(
                 StoreLocation.LocalMachine,
                 StoreName.My,
