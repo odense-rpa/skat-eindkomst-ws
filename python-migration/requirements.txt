@@ -1,0 +1,17 @@
+# SOAP client library
+zeep>=4.2.1
+
+# Certificate handling
+cryptography>=41.0.0
+
+# Environment variables
+python-dotenv>=1.0.0
+
+# Data processing
+pandas>=2.0.0
+
+# Logging
+loguru>=0.7.0
+
+# HTTP requests
+requests>=2.31.0
