@@ -107,13 +107,6 @@ class EIndkomst:
             # Create session for transport
             session = Session()
 
-            # Configure certificate authentication if paths are provided
-            if self.config.authentication_cert_path and self.config.signing_cert_path:
-                session.cert = (
-                    self.config.authentication_cert_path,
-                    self.config.signing_cert_path
-                )
-
             # Configure transport with session
             transport = Transport(session=session, timeout=60, operation_timeout=60)
 
@@ -124,9 +117,29 @@ class EIndkomst:
                 xsd_ignore_sequence_order=True
             )
 
+            # Configure WS-Security if certificates are provided
+            wsse = None
+            if self.config.authentication_cert_path and self.config.signing_cert_path:
+                self._log_info(f"Loading certificates from:")
+                self._log_info(f"  Auth: {self.config.authentication_cert_path}")
+                self._log_info(f"  Sign: {self.config.signing_cert_path}")
+
+                from zeep.wsse.signature import Signature
+                # Note: We're only signing outgoing requests, not verifying responses yet
+                # To verify responses, we'd need SKAT's public signing certificate
+                wsse = Signature(
+                    self.config.signing_cert_path,
+                    self.config.authentication_cert_path,
+                    self.config.authentication_cert_password or None
+                )
+                # Disable response signature verification for now
+                wsse.verify = lambda x: None
+                self._log_info("WS-Security configured with signatures (response verification disabled)")
+
             self.client = Client(
                 wsdl=self.wsdl,
                 transport=transport,
+                wsse=wsse,
                 settings=settings
             )
 
