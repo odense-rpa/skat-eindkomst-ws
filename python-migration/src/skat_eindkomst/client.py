@@ -4,14 +4,13 @@ Main client for SKAT eIndkomst web service
 from datetime import datetime
 from typing import Optional, Dict, Any
 from pathlib import Path
-import pandas as pd
 from zeep import Client, Settings
 from zeep.wsse.signature import Signature
+from zeep.helpers import serialize_object
 from requests import Session
 from zeep.transports import Transport
 
 from .config import ServiceConfig
-from .parsers.eindkomst_parser import EIndkomstParser
 from .utils.logger import get_logger
 
 
@@ -52,7 +51,6 @@ class EIndkomst:
         self.config = config
         self.environment = environment.lower()
         self.logger = logger or get_logger(__name__)
-        self.parser = EIndkomstParser(self.logger)
         self.get_basis_month = False
 
         # Select WSDL and endpoint based on environment
@@ -205,7 +203,7 @@ class EIndkomst:
         end_date: datetime,
         request_id: str,
         get_basis_month: bool = False
-    ) -> pd.DataFrame:
+    ) -> Dict[str, Any]:
         """
         Retrieve income information for a person (IndkomstOplysningPersonHent)
 
@@ -223,7 +221,7 @@ class EIndkomst:
             get_basis_month: Whether to retrieve basis month data (HentBasisMaaned)
 
         Returns:
-            pandas DataFrame with parsed income information
+            Dictionary with JSON-serialized response data
 
         Raises:
             ValueError: If required parameters are missing
@@ -238,8 +236,8 @@ class EIndkomst:
             ssn, worker_id, start_date, end_date, request_id, get_basis_month
         )
 
-        # Parse response to DataFrame
-        return self.parser.parse_result_to_dataframe(response)
+        # Convert zeep response to JSON-serializable dict
+        return serialize_object(response)
 
     def eindkomst_person_hent_klient(
         self,

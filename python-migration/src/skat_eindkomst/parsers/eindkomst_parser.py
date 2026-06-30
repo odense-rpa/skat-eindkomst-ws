@@ -78,27 +78,103 @@ class EIndkomstParser:
 
             records = []
 
-            # Navigate response structure
-            # Note: The exact structure depends on the WSDL schema
-            # This is a placeholder that needs adjustment based on actual responses
+            # Navigate response structure based on actual SKAT response
+            # Structure: IndkomstPersonUddata -> IndkomstOplysningPersonSamling -> 
+            #           IndkomstOplysningPersonStruktur -> IndkomstOplysningSamling
 
             if isinstance(response_dict, dict):
-                # Extract main response container
-                # Typically: IndkomstOplysningPersonHent_O or similar
+                # Try the actual SKAT response structure
+                if 'IndkomstPersonUddata' in response_dict:
+                    uddata = response_dict['IndkomstPersonUddata']
 
-                # Extract person information
-                person_info = self._extract_person_info(response_dict)
+                    # Navigate to IndkomstOplysningPersonSamling
+                    if uddata and 'IndkomstOplysningPersonSamling' in uddata:
+                        person_samling = uddata['IndkomstOplysningPersonSamling']
 
-                # Extract income records (blanketter/forms)
-                blanketter = self._extract_blanketter(response_dict)
+                        # Handle both single and list of persons
+                        if not isinstance(person_samling, list):
+                            person_samling = [person_samling] if person_samling else []
 
-                if blanketter:
-                    for blanket in blanketter:
-                        record = self._parse_blanket(blanket, person_info)
-                        records.append(record)
+                        for person_struktur in person_samling:
+                            if not person_struktur:
+                                continue
+
+                            # Extract person info
+                            person_info = {}
+                            if 'IndkomstOplysningPersonInddata' in person_struktur:
+                                person_inddata = person_struktur['IndkomstOplysningPersonInddata']
+                                if person_inddata and 'IndkomstOplysningValg' in person_inddata:
+                                    valg = person_inddata['IndkomstOplysningValg']
+                                    if valg and 'CPRNummerBNummer' in valg:
+                                        person_info['cpr'] = valg.get('CPRNummerBNummer', '')
+
+                            # Navigate to IndkomstOplysningSamling
+                            if 'IndkomstOplysningPersonStruktur' in person_struktur:
+                                struktur = person_struktur['IndkomstOplysningPersonStruktur']
+                                if struktur and 'IndkomstOplysningSamling' in struktur:
+                                    oplysning_samling = struktur['IndkomstOplysningSamling']
+
+                                    # Handle both single and list
+                                    if not isinstance(oplysning_samling, list):
+                                        oplysning_samling = [oplysning_samling] if oplysning_samling else []
+
+                                    for oplysning in oplysning_samling:
+                                        if not oplysning:
+                                            continue
+
+                                        # Extract employer info
+                                        employer_info = {}
+                                        if 'IndberetningPligtigVirksomhed' in oplysning:
+                                            virksomhed = oplysning['IndberetningPligtigVirksomhed']
+                                            if virksomhed:
+                                                employer_info['se_nummer'] = virksomhed.get('SENummer', '')
+                                                employer_info['cvr_nummer'] = virksomhed.get('CVRNummer', '')
+                                                employer_info['virksomhed_navn'] = virksomhed.get('VirksomhedNavn', '')
+
+                                        # Navigate to wage period information
+                                        if 'IndkomstLoenPeriodeSamling' in oplysning:
+                                            loen_samling = oplysning['IndkomstLoenPeriodeSamling']
+
+                                            # Handle both single and list
+                                            if not isinstance(loen_samling, list):
+                                                loen_samling = [loen_samling] if loen_samling else []
+
+                                            for loen_periode in loen_samling:
+                                                if not loen_periode:
+                                                    continue
+
+                                                # Create record combining person, employer, and period info
+                                                record = {**person_info, **employer_info}
+
+                                                # Extract period details
+                                                if 'LoenPeriodeOplysningStruktur' in loen_periode:
+                                                    struktur_data = loen_periode['LoenPeriodeOplysningStruktur']
+                                                    if struktur_data:
+                                                        record['periode_fra'] = struktur_data.get('LoenPeriodeFra', '')
+                                                        record['periode_til'] = struktur_data.get('LoenPeriodeTil', '')
+                                                        record['indberetning_type'] = struktur_data.get('IndberetningType', '')
+                                                        record['loen_art'] = struktur_data.get('LoenArt', '')
+                                                        record['loen_beloeb'] = struktur_data.get('LoenBeloeb', '')
+
+                                                        # Extract additional fields if present
+                                                        if 'ArbejdstidLoen' in struktur_data:
+                                                            record['arbejdstid_loen'] = struktur_data['ArbejdstidLoen']
+                                                        if 'Feriebeloeb' in struktur_data:
+                                                            record['feriebeloeb'] = struktur_data['Feriebeloeb']
+
+                                                records.append(record)
                 else:
-                    # If no blanketter, still create a record with person info
-                    records.append(person_info)
+                    # Fallback: try legacy structure
+                    person_info = self._extract_person_info(response_dict)
+                    blanketter = self._extract_blanketter(response_dict)
+
+                    if blanketter:
+                        for blanket in blanketter:
+                            record = self._parse_blanket(blanket, person_info)
+                            records.append(record)
+                    else:
+                        # If no data found, create empty record
+                        records.append(person_info if person_info else {})
 
             # Convert to DataFrame
             df = pd.DataFrame(records)

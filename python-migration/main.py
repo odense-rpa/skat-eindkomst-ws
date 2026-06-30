@@ -7,6 +7,7 @@ Runs in DEMO mode only (for testing purposes)
 """
 import os
 import sys
+import json
 from datetime import datetime
 from pathlib import Path
 
@@ -126,7 +127,7 @@ def run_demo():
 
     try:
         # Call service
-        datatable = e.indkomst_oplysning_person_hent(
+        result = e.indkomst_oplysning_person_hent(
             ssn=ssn,
             worker_id=user,
             start_date=datetime(2023, 1, 1),
@@ -136,20 +137,19 @@ def run_demo():
         )
 
         print("\nDone deal...")
-        print(f"\nRetrieved {len(datatable)} records:")
 
-        # Display results
-        if not datatable.empty:
-            print("\n" + "=" * 80)
-            print(datatable.to_string())
-            print("=" * 80)
+        # Pretty print JSON result
+        print("\n" + "=" * 80)
+        print("RESPONSE JSON:")
+        print("=" * 80)
+        print(json.dumps(result, indent=2, default=str))
+        print("=" * 80)
 
-            # Save to CSV
-            output_file = f"eindkomst_{ssn}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
-            datatable.to_csv(output_file, index=False, encoding='utf-8-sig')
-            print(f"\nData saved to: {output_file}")
-        else:
-            print("No data returned from service")
+        # Save to JSON file
+        output_file = f"eindkomst_{ssn}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        with open(output_file, 'w', encoding='utf-8') as f:
+            json.dump(result, f, indent=2, default=str, ensure_ascii=False)
+        print(f"\nData saved to: {output_file}")
 
     except Exception as ex:
         print(f"ERROR: {str(ex)}")
