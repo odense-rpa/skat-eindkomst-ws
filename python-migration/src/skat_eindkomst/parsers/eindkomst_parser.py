@@ -65,6 +65,17 @@ class EIndkomstParser:
 
             self._log_info("Parsing SOAP response to DataFrame")
 
+            # Debug: Print response structure
+            if self.logger:
+                import json
+                self._log_info(f"Response keys: {list(response_dict.keys()) if isinstance(response_dict, dict) else 'Not a dict'}")
+                # Log a sample of the response (first 500 chars)
+                try:
+                    sample = json.dumps(response_dict, indent=2, default=str)[:1000]
+                    self._log_info(f"Response sample: {sample}")
+                except:
+                    self._log_info(f"Response type: {type(response_dict)}")
+
             records = []
 
             # Navigate response structure

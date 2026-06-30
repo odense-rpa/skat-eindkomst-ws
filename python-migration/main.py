@@ -114,8 +114,8 @@ def run_demo():
     ssn = demo_ssns[0]
     user = get_env_or_default("DEMO_USER", "SystemNameTest")
 
-    # Generate request identifier
-    ident = f"TEST XXXXXX {datetime.now().strftime('%Y%m%d_%H%M%S.%f')[:-3]}"
+    # Generate request identifier (max 30 characters per SKAT requirement)
+    ident = f"TEST{datetime.now().strftime('%Y%m%d%H%M%S')}"  # TEST + 14 digits = 18 chars
 
     print("=" * 80)
     print("Kalder eindkomst IndkomstOplysningPersonHent TEST")

@@ -118,23 +118,66 @@ class EIndkomst:
             )
 
             # Configure WS-Security if certificates are provided
+            # This must match the C# AbstractBindingFactory.CreateBinding() configuration:
+            # - AsymmetricSecurityBindingElement with MutualCertificate
+            # - WS-Security 1.0 (not 1.1)
+            # - IncludeTimestamp = true
+            # - SecurityHeaderLayout = Lax
+            # - AllowSerializedSigningTokenOnReply = true
             wsse = None
             if self.config.authentication_cert_path and self.config.signing_cert_path:
                 self._log_info(f"Loading certificates from:")
                 self._log_info(f"  Auth: {self.config.authentication_cert_path}")
                 self._log_info(f"  Sign: {self.config.signing_cert_path}")
 
-                from zeep.wsse.signature import Signature
-                # Note: We're only signing outgoing requests, not verifying responses yet
-                # To verify responses, we'd need SKAT's public signing certificate
-                wsse = Signature(
-                    self.config.signing_cert_path,
-                    self.config.authentication_cert_path,
-                    self.config.authentication_cert_password or None
-                )
-                # Disable response signature verification for now
-                wsse.verify = lambda x: None
-                self._log_info("WS-Security configured with signatures (response verification disabled)")
+                try:
+                    from zeep.wsse.signature import BinarySignature
+                    from zeep.wsse import utils
+
+                    # Create BinarySignature (matches AsymmetricSecurityBindingElement)
+                    # This creates BinarySecurityToken with X.509 certificate
+                    signature = BinarySignature(
+                        self.config.signing_cert_path,
+                        self.config.authentication_cert_path,
+                        self.config.authentication_cert_password or None
+                    )
+
+                    # Add Timestamp (IncludeTimestamp = true)
+                    class BinarySignatureWithTimestamp(BinarySignature):
+                        def apply(self, envelope, headers):
+                            # Add timestamp first
+                            security = utils.get_security_header(envelope)
+                            timestamp = utils.WSU.Timestamp()
+                            created = utils.WSU.Created()
+                            expires = utils.WSU.Expires()
+
+                            from datetime import datetime, timedelta
+                            created.text = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+                            expires.text = (datetime.utcnow() + timedelta(minutes=5)).strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+
+                            timestamp.append(created)
+                            timestamp.append(expires)
+                            security.append(timestamp)
+
+                            # Then apply signature
+                            return super().apply(envelope, headers)
+
+                        def verify(self, envelope):
+                            # Disable response verification
+                            pass
+
+                    wsse = BinarySignatureWithTimestamp(
+                        self.config.signing_cert_path,
+                        self.config.authentication_cert_path,
+                        self.config.authentication_cert_password or None
+                    )
+
+                    self._log_info("WS-Security configured: BinarySecurityToken + Timestamp (WS-Security 1.0)")
+
+                except Exception as e:
+                    self._log_error(f"Error configuring WS-Security: {e}")
+                    self._log_info("This requires matching C# WCF AsymmetricSecurityBindingElement configuration")
+                    raise
 
             self.client = Client(
                 wsdl=self.wsdl,
