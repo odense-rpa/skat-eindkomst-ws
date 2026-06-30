@@ -7,8 +7,10 @@ from pathlib import Path
 from zeep import Client, Settings
 from zeep.wsse.signature import Signature
 from zeep.helpers import serialize_object
+from zeep.plugins import HistoryPlugin
 from requests import Session
 from zeep.transports import Transport
+from lxml import etree
 
 from .config import ServiceConfig
 from .utils.logger import get_logger
@@ -52,6 +54,7 @@ class EIndkomst:
         self.environment = environment.lower()
         self.logger = logger or get_logger(__name__)
         self.get_basis_month = False
+        self.history = HistoryPlugin()  # Track SOAP request/response XML
 
         # Select WSDL and endpoint based on environment
         if self.environment == "prod":
@@ -181,7 +184,8 @@ class EIndkomst:
                 wsdl=self.wsdl,
                 transport=transport,
                 wsse=wsse,
-                settings=settings
+                settings=settings,
+                plugins=[self.history]  # Add history plugin to track XML
             )
 
             self._log_info(f"SOAP client initialized for {self.environment} environment")
@@ -194,6 +198,55 @@ class EIndkomst:
         except Exception as e:
             self._log_error(f"Error setting up SOAP client: {str(e)}")
             raise
+
+    def save_last_xml_exchange(self, output_dir: str = ".") -> tuple[Optional[str], Optional[str]]:
+        """
+        Save the last SOAP request and response XML to files
+
+        Args:
+            output_dir: Directory to save XML files (default: current directory)
+
+        Returns:
+            Tuple of (request_file_path, response_file_path) or (None, None) if no history
+        """
+        if not self.history.last_sent or not self.history.last_received:
+            self._log_info("No SOAP exchange history available")
+            return None, None
+
+        output_path = Path(output_dir)
+        output_path.mkdir(parents=True, exist_ok=True)
+
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+
+        # Save request XML
+        request_file = output_path / f"soap_request_{timestamp}.xml"
+        try:
+            request_xml = etree.tostring(
+                self.history.last_sent["envelope"], 
+                pretty_print=True, 
+                encoding='unicode'
+            )
+            request_file.write_text(request_xml, encoding='utf-8')
+            self._log_info(f"SOAP request XML saved to: {request_file}")
+        except Exception as e:
+            self._log_error(f"Error saving request XML: {e}")
+            request_file = None
+
+        # Save response XML
+        response_file = output_path / f"soap_response_{timestamp}.xml"
+        try:
+            response_xml = etree.tostring(
+                self.history.last_received["envelope"],
+                pretty_print=True,
+                encoding='unicode'
+            )
+            response_file.write_text(response_xml, encoding='utf-8')
+            self._log_info(f"SOAP response XML saved to: {response_file}")
+        except Exception as e:
+            self._log_error(f"Error saving response XML: {e}")
+            response_file = None
+
+        return str(request_file) if request_file else None, str(response_file) if response_file else None
 
     def indkomst_oplysning_person_hent(
         self,

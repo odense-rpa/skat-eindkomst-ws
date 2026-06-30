@@ -138,6 +138,15 @@ def run_demo():
 
         print("\nDone deal...")
 
+        # Save raw SOAP XML for investigation
+        print("\n" + "=" * 80)
+        print("SAVING RAW SOAP XML...")
+        print("=" * 80)
+        req_file, resp_file = e.save_last_xml_exchange()
+        if req_file and resp_file:
+            print(f"Request XML:  {req_file}")
+            print(f"Response XML: {resp_file}")
+
         # Pretty print JSON result
         print("\n" + "=" * 80)
         print("RESPONSE JSON:")
