@@ -7,3 +7,4 @@
 ### Git
 - skip the co-authored by copilot part in commit messages
 - commit only when ordered by user
+- keep commit messages concise and relevant to the changes
