@@ -2,82 +2,65 @@
 
 All notable changes to the Python migration will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
-
 ## [Unreleased]
 
-### In Progress
-- Local WSDL files integration
-- GitHub fallback URL support
-- WSDL documentation
-
 ### Planned
-- Unit tests migration from C# DatesTests
-- Integration tests with mock SOAP service
-- Production environment support
-- Certificate handling improvements
-- Windows Certificate Store support
-- Async/await support for concurrent requests
+- Unit tests
+- Production environment testing
+- Async support
 - Docker containerization
-- CI/CD pipeline
 
-## [2.0.1-python.2] - 2024-01-XX (WSDL Update)
+## [2.0.2-python.3] - Latest (JSON + XML Diagnostics)
 
-### Added - WSDL Management
-- Local WSDL files in `wsdl/eIndkomst10/` folder
-- Automatic local WSDL file detection
-- GitHub fallback URLs (https://github.com/skat/eksternwiki)
-- WSDL_GUIDE.md documentation
-- Faster client initialization with local WSDL
+### Added
+- JSON output as primary response format (via `serialize_object()`)
+- Raw SOAP XML capture via `HistoryPlugin`
+- `save_last_xml_exchange()` method for persisting request/response XML
+- Timestamped XML files for diagnostic inspection
 
-### Changed - WSDL URLs
-- Updated from old eksternwiki.skat.dk URLs to GitHub
-- Primary: Local WSDL files (offline support)
-- Fallback: GitHub raw URLs
-- Demo endpoint: https://services.extranet.demo.skat.dk/vericert/services/IndkomstOplysningPersonHentV2ServicePort
-- Prod endpoint: https://services.extranet.skat.dk/vericert/services/IndkomstOplysningPersonHentV2ServicePort
+### Changed
+- Simplified client to return JSON-compatible dict instead of DataFrame
+- Response processing now favors native Python dict serialization
+- XML logging automatically timestamps output files
 
 ### Improved
-- Client startup speed (uses local WSDL)
-- Offline capability (no network needed for WSDL)
-- Version control (WSDL tracked in repository)
-- Documentation updated with WSDL information
+- Response debugging capability (save raw SOAP for inspection)
+- Response transparency (JSON output is queryable)
 
-## [2.0.1-python.1] - 2024-01-XX (Migration Initial Release)
+## [2.0.1-python.2] - WSDL Update
 
-### Added - Core Migration
-- Initial Python 3.8+ migration from C#/.NET Framework 4.7.2
-- `EIndkomst` client class (from `EIndkomst.cs`)
-- `ServiceConfig` configuration class (from `ServiceConfig.cs`)
-- `EIndkomstParser` response parser (from `eIndkomstParser.cs`)
-- Date utilities module (from `Dates.cs`)
-- Logging utilities with ILog interface compatibility
-- Console application for demo testing (from `Program.cs`)
+### Added
+- Local WSDL files in `wsdl/eIndkomst10/`
+- Automatic local WSDL detection
+- GitHub fallback URLs
 
-### Added - Documentation
-- README.md with comprehensive project documentation
-- QUICKSTART.md for rapid setup and testing
-- MIGRATION_GUIDE.md with detailed C# to Python mapping
-- FILE_SUMMARY.md listing all created files
-- CHANGELOG.md (this file)
+### Changed
+- Updated endpoints to demo.skat.dk infrastructure
+- WSDL loading prioritizes local files for offline support
 
-### Added - Configuration
-- `requirements.txt` with Python dependencies
-- `pyproject.toml` for project metadata and build configuration
-- `.env.example` with demo configuration from original project
-- `.gitignore` for Python-specific patterns
-- `setup.bat` for Windows setup automation
-- `setup.sh` for Linux/Mac setup automation
+### Improved
+- Startup speed (local WSDL files)
+- Offline capability
+- Repository version control of WSDL
 
-### Added - Dependencies
-- zeep >= 4.2.1 (SOAP client, replaces WCF)
-- cryptography >= 41.0.0 (certificate handling)
-- python-dotenv >= 1.0.0 (environment variables)
-- pandas >= 2.0.0 (data processing, replaces DataTable)
-- loguru >= 0.7.0 (logging)
-- requests >= 2.31.0 (HTTP transport)
+## [2.0.1-python.1] - Initial Python Migration
 
-### Changed - Architecture
+### Added
+- Python 3.8+ migration from C#/.NET 4.7.2
+- `EIndkomst` SOAP client (from `EIndkomst.cs`)
+- `ServiceConfig` class (from `ServiceConfig.cs`)
+- `EIndkomstParser` response handling
+- Date utilities and ILog-compatible logging
+- Console application for demo testing
+- Requirements, pyproject.toml, setup scripts
+- Comprehensive documentation (README, QUICKSTART, MIGRATION_GUIDE)
+
+### Dependencies
+- zeep >= 4.2.1 (SOAP client)
+- cryptography >= 41.0.0 (certificates)
+- python-dotenv >= 1.0.0 (env config)
+- pandas >= 2.0.0 (data processing)
+- lxml >= 4.9.0 (XML handling)
 - Replaced WCF with Zeep SOAP library
 - Replaced auto-generated proxy classes with dynamic WSDL parsing
 - Replaced `System.Data.DataTable` with `pandas.DataFrame`

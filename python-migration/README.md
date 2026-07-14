@@ -1,25 +1,23 @@
 # SKAT eIndkomst Python Client
 
-Python migration of the C#/.NET Framework 4.7.2 SKAT eIndkomst web service client.
+Standalone Python port of the C#/.NET Framework 4.7.2 SKAT eIndkomst SOAP client (Blue Prism removed).
 
 ## Overview
 
-This is a Python 3.8+ implementation of the SKAT eIndkomst SOAP web service client, originally built in C# for Blue Prism RPA integration. This migration removes the Blue Prism dependency and provides a standalone Python library for accessing Danish Tax Authority's income information services.
+Python 3.8+ implementation for accessing Danish Tax Authority's eIndkomst web service. Demo environment only.
 
-**Original Project:** `Odk.BluePrism.Skat` (C#/.NET Framework 4.7.2)  
-**Migration Status:** Demo environment only (for testing and experimentation)
+**Original:** `Odk.BluePrism.Skat` (C#/.NET 4.7.2)  
+**Status:** Demo-only, operational with JSON output and XML diagnostics
 
 ## Features
 
-- ? SOAP/WCF client using Zeep library
-- ? Support for Demo environment
-- ? X.509 certificate-based authentication
-- ? WS-Security 1.0 support
-- ? Data parsing to pandas DataFrame (equivalent to C# DataTable)
-- ? Environment-based configuration
-- ? Compatible logging interface (ILog pattern)
-- ? Production environment support (planned)
-- ? Unit tests (planned)
+- SOAP/WCF client via Zeep
+- X.509 certificate authentication (PEM files)
+- WS-Security signing with BinarySecurityToken and Timestamp
+- JSON response output
+- Raw SOAP request/response XML capture for inspection
+- Environment-based configuration (.env)
+- ILog-compatible logging interface
 
 ## Installation
 
@@ -102,18 +100,15 @@ The client supports two modes for certificate handling:
 
 ### Console Application
 
-Run the demo console application:
+Run demo:
 
 ```bash
 python main.py
 ```
 
-This will:
-1. Load configuration from `.env`
-2. Connect to SKAT demo service
-3. Fetch income data for the first demo SSN
-4. Display results in console
-5. Save results to CSV file
+Outputs:
+- JSON response to console and file
+- Raw SOAP XML files for inspection (optional via `save_last_xml_exchange()`)
 
 ### As a Library
 
@@ -121,26 +116,61 @@ This will:
 from datetime import datetime
 from skat_eindkomst import EIndkomst, ServiceConfig
 
-# Load configuration
-config = ServiceConfig.from_env("demo")
-
 # Create client
+config = ServiceConfig(
+    dns_identity="SKAT OIO Gateway Test",
+    authentication_cert_path="path/to/cert.pem",
+    signing_cert_path="path/to/key.pem",
+    se_nummer="19552101",
+    abonnement_type_kode="3153",
+    abonnent_type_kode="0750",
+    adgang_formaal_type_kode="171"
+)
 client = EIndkomst(config, environment="demo")
 
-# Fetch income data
-df = client.indkomst_oplysning_person_hent(
+# Call service - returns JSON-compatible dict
+result = client.indkomst_oplysning_person_hent(
     ssn="2105440645",
-    worker_id="SystemNameTest",
+    worker_id="TestUser",
     start_date=datetime(2023, 1, 1),
     end_date=datetime(2023, 12, 31),
-    request_id="REQ_20240101_120000",
-    get_basis_month=False
+    request_id="TEST_001"
 )
 
-# Work with pandas DataFrame
-print(df.head())
-df.to_csv("output.csv", index=False)
+# Save raw SOAP XML for inspection
+req_file, resp_file = client.save_last_xml_exchange()
+print(f"Request saved to: {req_file}")
+print(f"Response saved to: {resp_file}")
 ```
+
+### Output Formats
+
+The client returns JSON-compatible data from the SOAP service:
+
+```python
+import json
+
+# Result is serialized to dict/JSON
+print(json.dumps(result, indent=2))
+
+# Save to file
+with open("response.json", "w") as f:
+    json.dump(result, f, indent=2, default=str)
+```
+
+### XML Diagnostics
+
+To inspect raw SOAP request/response XML:
+
+```python
+# After any successful call
+req_file, resp_file = client.save_last_xml_exchange()
+
+# Files contain timestamped SOAP envelopes with WS-Security headers
+# Format: soap_request_YYYYMMDD_HHMMSS.xml
+#         soap_response_YYYYMMDD_HHMMSS.xml
+```
+
 
 ## Project Structure
 
