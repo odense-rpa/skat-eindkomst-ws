@@ -365,3 +365,7 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# Dont add service debug output 
+eindkomst_*.json
+soap_*.xml
