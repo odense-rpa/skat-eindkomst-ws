@@ -170,7 +170,7 @@ def main():
     """Main entry point"""
 
     # Load .env file from project root (parent directory)
-    env_path = Path(__file__).parent.parent / ".env"
+    env_path = Path(__file__).parent / ".env"
 
     if env_path.exists():
         print(f"Loading environment from: {env_path}")

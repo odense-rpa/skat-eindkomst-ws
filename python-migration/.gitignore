@@ -64,3 +64,6 @@ htmlcov/
 
 # Distribution
 *.whl
+
+# certs 
+certs/*
